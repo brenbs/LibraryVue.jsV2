@@ -4,7 +4,8 @@
       <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
-    <v-data-table :headers="headers" :search="search" :items="livros" :items-per-page="15" sort-by="id" class="elevation-1">
+    <v-data-table :headers="headers" :search="search" :items="livros" :items-per-page="15" sort-by="id"
+      class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
           <h2>Livros</h2>
@@ -66,7 +67,7 @@
 
 <script>
 import booksApi from '../services/booksApi';
-import editorsApi from '../services/editorsApi';
+import editorsApi from '../services/publisherApi';
 import Swal from 'sweetalert2';
 
 export default {

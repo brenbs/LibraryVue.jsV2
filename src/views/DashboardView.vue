@@ -67,7 +67,7 @@
 </template>
  
 <script>
-import editorsApi from '../services/editorsApi';
+import editorsApi from '../services/publisherApi';
 import usersApi from '../services/usersApi';
 import rentalApi from '../services/rentalApi';
 import booksApi from '../services/booksApi';

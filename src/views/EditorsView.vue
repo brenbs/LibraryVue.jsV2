@@ -4,17 +4,24 @@
       <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
-    <v-data-table :headers="headers" :search="search" :items="publishers" :items-per-page="15" sort-by="id"
-      class="elevation-1">
+    <v-data-table 
+    :headers="headers" 
+    :search="search" 
+    :items="publishers" 
+    :items-per-page="pageSize" 
+    :page="page"
+    :server-items-length="total" 
+    @update:options="handleOptionsUpdate" 
+    class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
-          <h2>publishers</h2>
+          <h2>Editoras</h2>
           <v-spacer></v-spacer>
           <v-spacer></v-spacer>
           <v-dialog v-model="dialog" max-width="500px">
             <template v-slot:activator="{ on, attrs }">
               <v-btn color="primary" dark class="mb-2" v-bind="attrs" v-on="on">
-                Nova publisher
+                Nova Editora
               </v-btn>
             </template>
             <v-form ref="editorsForm" @submit.prevent="save">
@@ -60,17 +67,19 @@
 </template>
 
 <script>
-import editorsApi from '../services/editorsApi';
+import publisherApi from '../services/publisherApi';
 import Swal from 'sweetalert2';
 
 export default {
   data() {
     return {
 
-      SearchValue:null,
-      Page:1,
-      PageSize:5,
-      OrderByProrperty:'Id',
+      searchValue: null,
+      page: 1,
+      pageSize: 10,
+      orderByProrperty: "id",
+      total: 0,
+      errors: [],
 
       formIsValid: false,
       geralRules: [
@@ -92,8 +101,8 @@ export default {
           filterable: false,
           value: 'id',
         },
-        { text: 'name:', value: 'name' },
-        { text: 'city:', value: 'city' },
+        { text: 'Nome:', value: 'name' },
+        { text: 'Cidade:', value: 'city' },
         { text: 'Ações:', value: 'actions', sortable: false },
       ],
       publishers: [],
@@ -103,7 +112,7 @@ export default {
   },
   computed: {
     formTitle() {
-      return !this.publisher.id ? 'Nova publisher' : 'Atualizar publisher';
+      return !this.publisher.id ? 'Nova Editora' : 'Atualizar Editora';
     },
   },
   watch: {
@@ -119,17 +128,49 @@ export default {
     },
   },
   methods: {
-    getEditors() {
-      editorsApi.list().then((result) => {
-        this.publishers = result.data;
-      });
+    handleOptionsUpdate(options) {
+      const sortByMapping = {
+        id: "Id",
+        name: "Name",
+        city: "City",
+      };
+      if (options.sortBy[0] || options.sortDesc[0]) {
+        this.orderByProperty = sortByMapping[options.sortBy[0]];
+        this.desc = options.sortDesc[0];
+      } else {
+        this.orderByProperty = "Id";
+        this.desc = false;
+      }
+      this.pageSize = options.itemsPerPage;
+      this.page = options.page;
+      this.total = options.itemsPerPage;
+      this.itemsPerPage = options.itemsPerPage;
+      this.getEditors();
     },
+
+    async getEditors() {
+      try {
+        const response = await publisherApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.publishers = response.data.data.data;
+        this.total = response.data.TotalRegisters;
+      } catch {
+        console.error("Erro ao Listar :");
+        this.publishers = [];
+        //console.log(error.response.data.message);
+      }
+    },
+
     save() {
       if (!this.publisher.id) {
-        editorsApi.save(this.publisher).then(() => {
+        publisherApi.save(this.publisher).then(() => {
           Swal.fire({
             icon: 'success',
-            title: 'publisher adicionada com sucesso!',
+            title: 'editora adicionada com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -139,15 +180,15 @@ export default {
         })
           .catch(error => {
             console.log(error.response.data.error)
-            Swal.fire("Erro ao cadastrar o publisher.", error.response.data.error, "error");
+            Swal.fire("Erro ao cadastrar a editora.", error.response.data.error, "error");
           });
       }
       else {
-        editorsApi.update(this.publisher).then(() => {
+        publisherApi.update(this.publisher).then(() => {
           this.publisher = {};
           Swal.fire({
             icon: 'success',
-            title: 'publisher atualizado com sucesso!',
+            title: 'Editora atualizada com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -157,16 +198,13 @@ export default {
         })
           .catch(error => {
             console.error(error.response.data.error);
-            Swal.fire("Erro ao atualizar o publisher.", error.response.data.error, "error");
+            Swal.fire("Erro ao atualizar a editora.", error.response.data.error, "error");
           });
       }
     },
 
     editItem(item) {
       this.publisher.id = item.id; //associa os valores do item do modal com os publishers da api
-      this.publisher.name = item.name;
-      this.publisher.email = item.email;
-      this.publisher.endereco = item.endereco;
       this.publisher.city = item.city;
       this.editedIndex = this.publishers.indexOf(item);
       this.dialog = true;
@@ -183,15 +221,13 @@ export default {
       this.publisher = {
         id: '',
         name: '',
-        email: '',
-        endereco: '',
         city: '',
       };
     },
     deleteItem(publisher) {
       Swal.fire({
         icon: 'warning',
-        title: 'Deseja excluir o publisher?',
+        title: 'Deseja excluira editora?',
         text: 'Essa ação não pode ser desfeita!',
         showCancelButton: true,
         confirmButtonText: 'Sim',
@@ -200,17 +236,17 @@ export default {
         cancelButtonColor: '#d33',
       }).then(result => {
         if (result.isConfirmed) {
-          editorsApi.delete(publisher).then(() => {
+          publisherApi.delete(publisher).then(() => {
             this.getEditors();
             this.errors = [];
             Swal.fire({
               icon: 'success',
-              title: 'publisher excluído com sucesso!',
+              title: 'Editora excluído com sucesso!',
               showConfirmButton: false,
               timer: 2000,
             });
           }).catch(e => {
-            console.error("Erro ao excluir publisher:", e);
+            console.error("Erro ao excluir a editora:", e);
             Swal.fire({
               icon: 'warning',
               title: 'Ocorreu um erro!',

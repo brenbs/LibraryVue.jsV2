@@ -4,8 +4,15 @@
       <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
-    <v-data-table :headers="headers" :search="search" :items="usuarios" :items-per-page="15" sort-by="id"
-      class="elevation-1">
+    <v-data-table 
+    :headers="headers" 
+    :search="search" 
+    :items="users" 
+    :items-per-page="pageSize" 
+    :page="page"
+    :server-items-length="total" 
+    @update:options="handleOptionsUpdate" 
+    class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
           <h2>Usuários</h2>
@@ -24,13 +31,13 @@
                 </v-card-title>
                 <v-card-text>
                   <v-container>
-                    <v-text-field label="Nome:*" v-model="usuario.nome" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Nome:*" v-model="user.name" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="Email:*" v-model="usuario.email" :rules="emailRules" hide-details="auto"
+                    <v-text-field label="Email:*" v-model="user.email" :rules="emailRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="Endereço:*" v-model="usuario.endereco" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Endereço:*" v-model="user.adress" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="Cidade:*" v-model="usuario.cidade" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Cidade:*" v-model="user.city" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
                   </v-container>
                 </v-card-text>
@@ -71,7 +78,12 @@ export default {
   data() {
     return {
 
-      //validação
+      searchValue: null,
+      page: 1,
+      pageSize: 10,
+      orderByProrperty: "id",
+      total: 0,
+      errors: [],
 
       formIsValid: false,
       geralRules: [
@@ -85,12 +97,12 @@ export default {
 
       dialog: false,
 
-      usuario: {
+      user: {
         id: '',
-        nome: '',
+        name: '',
         email: '',
-        endereco: '',
-        cidade: '',
+        adress: '',
+        city: '',
       },
       search: '',
       headers: [
@@ -100,20 +112,20 @@ export default {
           filterable: false,
           value: 'id',
         },
-        { text: 'Nome:', value: 'nome' },
+        { text: 'Nome:', value: 'name' },
         { text: 'Email:', value: 'email' },
-        { text: 'Endereço:', value: 'endereco' },
-        { text: 'Cidade:', value: 'cidade' },
+        { text: 'Endereço:', value: 'adress' },
+        { text: 'Cidade:', value: 'city' },
         { text: 'Ações:', value: 'actions', sortable: false },
       ],
-      usuarios: [],
+      users: [],
       editedItem: {},
       defaultItem: {},
     };
   },
   computed: {
     formTitle() {
-      return !this.usuario.id ? 'Novo Usuário' : 'Atualizar Usuário';
+      return !this.user.id ? 'Novo Usuário' : 'Atualizar Usuário';
     },
   },
   watch: {
@@ -129,14 +141,48 @@ export default {
     },
   },
   methods: {
-    getUsers() {
-      usersApi.list().then((result) => {
-        this.usuarios = result.data;
-      });
+    handleOptionsUpdate(options) {
+      const sortByMapping = {
+        id: "Id",
+        name: "Name",
+        email: "Email",
+        adress: "Adress",
+        city: "City",
+      };
+      if (options.sortBy[0] || options.sortDesc[0]) {
+        this.orderByProperty = sortByMapping[options.sortBy[0]];
+        this.desc = options.sortDesc[0];
+      } else {
+        this.orderByProperty = "Id";
+        this.desc = false;
+      }
+      this.pageSize = options.itemsPerPage;
+      this.page = options.page;
+      this.total = options.itemsPerPage;
+      this.itemsPerPage = options.itemsPerPage;
+      this.getUsers();
     },
+
+    async getUsers() {
+      try {
+        const response = await usersApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.users = response.data.data.data;
+        this.total = response.data.TotalRegisters;
+      } catch {
+        console.error("Erro ao Listar :");
+        this.users = [];
+        //console.log(error.response.data.message);
+      }
+    },
+
     save() {
-      if (!this.usuario.id) {
-        usersApi.save(this.usuario).then(() => {
+      if (!this.user.id) {
+        usersApi.save(this.user).then(() => {
           Swal.fire({
             icon: 'success',
             title: 'usuario adicionado com sucesso!',
@@ -153,8 +199,8 @@ export default {
           });
       }
       else {
-        usersApi.update(this.usuario).then(() => {
-          this.usuario = {};
+        usersApi.update(this.user).then(() => {
+          this.user = {};
           Swal.fire({
             icon: 'success',
             title: 'Usuário atualizado com sucesso!',
@@ -173,12 +219,12 @@ export default {
     },
 
     editItem(item) {
-      this.usuario.id = item.id; //associa os valores do item do modal com os usuarios da api
-      this.usuario.nome = item.nome;
-      this.usuario.email = item.email;
-      this.usuario.endereco = item.endereco;
-      this.usuario.cidade = item.cidade;
-      this.editedIndex = this.usuarios.indexOf(item);
+      this.user.id = item.id; //associa os valores do item do modal com os usuarios da api
+      this.user.name = item.name;
+      this.user.email = item.email;
+      this.user.adress = item.adress;
+      this.user.city = item.city;
+      this.editedIndex = this.users.indexOf(item);
       this.dialog = true;
       this.checkFormValidity();
     },
@@ -190,15 +236,15 @@ export default {
     },
 
     clearForm() {
-      this.usuario = {
+      this.user = {
         id: '',
-        nome: '',
+        name: '',
         email: '',
-        endereco: '',
-        cidade: '',
+        adress: '',
+        city: '',
       };
     },
-    deleteItem(usuario) {
+    deleteItem(user) {
       Swal.fire({
         icon: 'warning',
         title: 'Deseja excluir o usuário?',
@@ -210,7 +256,7 @@ export default {
         cancelButtonColor: '#d33',
       }).then(result => {
         if (result.isConfirmed) {
-          usersApi.delete(usuario).then(() => {
+          usersApi.delete(user).then(() => {
             this.getUsers();
             this.errors = [];
             Swal.fire({
