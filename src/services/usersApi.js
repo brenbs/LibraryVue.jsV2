@@ -8,7 +8,7 @@ export default{
       SearchValue:params.Searchvalue,
       Page:params.Page,
       PageSize:params.PageSize,
-      OrderByProrperty:params.OrderByProrperty,
+      OrderByPorperty:params.OrderByPorperty,
     }
   })
  },
@@ -18,10 +18,10 @@ export default{
  },
 
  update:(user)=>{
-  return http.put(`user/${user.Id}`,user)
+  return http.put(`user/${user.id}`,user)
  },
 
  delete:(user) => {
-   return http.delete(`user/${user.Id}`,user)
+   return http.delete(`user/${user.id}`,user)
  }
 }

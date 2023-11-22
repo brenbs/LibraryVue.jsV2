@@ -8,7 +8,7 @@ export default{
       SearchValue:params.Searchvalue,
       Page:params.Page,
       PageSize:params.PageSize,
-      OrderByProrperty:params.OrderByProrperty,
+      OrderByPorperty:params.OrderByPorperty,
     }
   })
    //aqui entre aspas é meio q a função que to chamando,no caso a de listar(get) usuarios que é como ta la no swagger
@@ -20,10 +20,10 @@ export default{
  },
 
  update:(publisher)=>{
-  return http.put(`publisher/${publisher.Id}`,publisher)
+  return http.put(`publisher/${publisher.id}`,publisher)
  },
 
  delete:(publisher) => {
-   return http.delete(`publisher/${publisher.Id}`,publisher)
+   return http.delete(`publisher/${publisher.id}`,publisher)
  }
 }

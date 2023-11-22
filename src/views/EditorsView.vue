@@ -1,17 +1,17 @@
 <template>
   <v-card>
     <v-card-title>
-      <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
+      <v-text-field v-model="searchValue" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
     <v-data-table 
     :headers="headers" 
-    :search="search" 
+    :search="searchValue" 
     :items="publishers" 
     :items-per-page="pageSize" 
     :page="page"
     :server-items-length="total" 
-    @update:options="handleOptionsUpdate" 
+    @update:options="handleOptionsUpdate"
     class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
@@ -31,9 +31,9 @@
                 </v-card-title>
                 <v-card-text>
                   <v-container>
-                    <v-text-field label="name:*" v-model="publisher.name" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Nome:*" v-model="publisher.name" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="city:*" v-model="publisher.city" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Cidade:*" v-model="publisher.city" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
                   </v-container>
                 </v-card-text>
@@ -74,13 +74,14 @@ export default {
   data() {
     return {
 
-      searchValue: null,
+      searchValue: "",
       page: 1,
       pageSize: 10,
-      orderByProrperty: "id",
+      orderByPorperty: "id",
       total: 0,
+      desc:false,
       errors: [],
-
+      
       formIsValid: false,
       geralRules: [
         v => !!v || 'Campo obrigatório',
@@ -93,7 +94,6 @@ export default {
         name: '',
         city: '',
       },
-      search: '',
       headers: [
         {
           text: 'Id:',
@@ -121,10 +121,8 @@ export default {
         this.close();
       }
     },
-    dialogDelete(val) {
-      if (!val) {
-        this.closeDelete();
-      }
+    searchValue: function(){
+    this.getEditors();
     },
   },
   methods: {
@@ -135,10 +133,10 @@ export default {
         city: "City",
       };
       if (options.sortBy[0] || options.sortDesc[0]) {
-        this.orderByProperty = sortByMapping[options.sortBy[0]];
+        this.orderByPorperty = sortByMapping[options.sortBy[0]];
         this.desc = options.sortDesc[0];
       } else {
-        this.orderByProperty = "Id";
+        this.orderByPorperty = "Id";
         this.desc = false;
       }
       this.pageSize = options.itemsPerPage;
@@ -153,15 +151,14 @@ export default {
         const response = await publisherApi.list({
           Page: this.page,
           PageSize: this.pageSize,
-          OrderByProperty: this.orderByProperty,
+          OrderByPorperty: this.orderByPorperty,
           SearchValue: this.searchValue,
         });
-        this.publishers = response.data.data.data;
-        this.total = response.data.TotalRegisters;
+        this.publishers = response.data.data;
+        this.total = response.data.totalRegisters;
       } catch {
         console.error("Erro ao Listar :");
         this.publishers = [];
-        //console.log(error.response.data.message);
       }
     },
 
@@ -170,7 +167,7 @@ export default {
         publisherApi.save(this.publisher).then(() => {
           Swal.fire({
             icon: 'success',
-            title: 'editora adicionada com sucesso!',
+            title: 'Editora adicionada com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -179,8 +176,14 @@ export default {
           this.$refs.editorsForm.reset();
         })
           .catch(error => {
-            console.log(error.response.data.error)
-            Swal.fire("Erro ao cadastrar a editora.", error.response.data.error, "error");
+            console.log(error.response.data.message)
+            Swal.fire({
+                icon: "error",
+                title: "Erro ao adicionar editora",
+                text: error.response.data.message,
+                showConfirmButton: false,
+                timer: 3000,
+              });
           });
       }
       else {
@@ -197,14 +200,21 @@ export default {
           this.$refs.editorsForm.reset();
         })
           .catch(error => {
-            console.error(error.response.data.error);
-            Swal.fire("Erro ao atualizar a editora.", error.response.data.error, "error");
+            console.error(error.response.data.message);
+            Swal.fire({
+                icon: "error",
+                title: "Erro ao atualizar editora",
+                text: error.response.data.message,
+                showConfirmButton: false,
+                timer: 3000,
+              });
           });
       }
     },
 
     editItem(item) {
       this.publisher.id = item.id; //associa os valores do item do modal com os publishers da api
+      this.publisher.name = item.name;
       this.publisher.city = item.city;
       this.editedIndex = this.publishers.indexOf(item);
       this.dialog = true;
@@ -245,19 +255,19 @@ export default {
               showConfirmButton: false,
               timer: 2000,
             });
-          }).catch(e => {
-            console.error("Erro ao excluir a editora:", e);
+          }).catch(error => {
+            console.error("Erro ao excluir a editora:", error);
             Swal.fire({
-              icon: 'warning',
-              title: 'Ocorreu um erro!',
-              showConfirmButton: true,
-              timer: 2000,
-            });
+                icon: "error",
+                title: "Erro ao excluir editora",
+                text: error.response.data.message,
+                showConfirmButton: false,
+                timer: 3000,
+              });
           });
         }
       })
     },
-
     checkFormValidity() {
       this.formIsValid = this.$refs.editorsForm.validate();
     },

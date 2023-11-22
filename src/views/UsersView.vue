@@ -6,11 +6,11 @@
     </v-card-title>
     <v-data-table 
     :headers="headers" 
-    :search="search" 
+    :search="search"
     :items="users" 
-    :items-per-page="pageSize" 
+    :items-per-page="pageSize"
     :page="page"
-    :server-items-length="total" 
+    :server-items-length="total"
     @update:options="handleOptionsUpdate" 
     class="elevation-1">
       <template v-slot:top>
@@ -80,9 +80,10 @@ export default {
 
       searchValue: null,
       page: 1,
-      pageSize: 10,
-      orderByProrperty: "id",
+      pageSize: 5,
+      orderByPorperty: "id",
       total: 0,
+      desc: false,
       errors: [],
 
       formIsValid: false,
@@ -134,11 +135,6 @@ export default {
         this.close();
       }
     },
-    dialogDelete(val) {
-      if (!val) {
-        this.closeDelete();
-      }
-    },
   },
   methods: {
     handleOptionsUpdate(options) {
@@ -150,10 +146,10 @@ export default {
         city: "City",
       };
       if (options.sortBy[0] || options.sortDesc[0]) {
-        this.orderByProperty = sortByMapping[options.sortBy[0]];
+        this.orderByPorperty = sortByMapping[options.sortBy[0]];
         this.desc = options.sortDesc[0];
       } else {
-        this.orderByProperty = "Id";
+        this.orderByPorperty = "Id";
         this.desc = false;
       }
       this.pageSize = options.itemsPerPage;
@@ -168,42 +164,48 @@ export default {
         const response = await usersApi.list({
           Page: this.page,
           PageSize: this.pageSize,
-          OrderByProperty: this.orderByProperty,
+          OrderByPorperty: this.orderByPorperty,
           SearchValue: this.searchValue,
         });
-        this.users = response.data.data.data;
-        this.total = response.data.TotalRegisters;
+        this.users = response.data.data;
+        this.total = response.data.totalRegisters;
       } catch {
         console.error("Erro ao Listar :");
         this.users = [];
-        //console.log(error.response.data.message);
       }
     },
 
     save() {
       if (!this.user.id) {
-        usersApi.save(this.user).then(() => {
+        usersApi.save(this.user).then((response) => {
           Swal.fire({
             icon: 'success',
             title: 'usuario adicionado com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
+          console.log(response);
           this.getUsers();
           this.close();
           this.$refs.userForm.reset();
         })
           .catch(error => {
-            console.log(error.response.data.error)
-            Swal.fire("Erro ao cadastrar o usuário.", error.response.data.error, "error");
+            console.log(error.response.data)
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao adicionar usuário",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
+            });
           });
       }
       else {
-        usersApi.update(this.user).then(() => {
+        usersApi.update(this.user).then((response) => {
           this.user = {};
           Swal.fire({
             icon: 'success',
-            title: 'Usuário atualizado com sucesso!',
+            title: response.data.message,
             showConfirmButton: false,
             timer: 2000,
           });
@@ -211,15 +213,21 @@ export default {
           this.close();
           this.$refs.userForm.reset();
         })
-          .catch(error => {
-            console.error(error.response.data.error);
-            Swal.fire("Erro ao atualizar o usuário.", error.response.data.error, "error");
+        .catch(error => {
+            console.log(error.response.data)
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao atualizar usuário",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
+            });
           });
       }
     },
 
     editItem(item) {
-      this.user.id = item.id; //associa os valores do item do modal com os usuarios da api
+      this.user.id = item.id;
       this.user.name = item.name;
       this.user.email = item.email;
       this.user.adress = item.adress;
@@ -237,7 +245,7 @@ export default {
 
     clearForm() {
       this.user = {
-        id: '',
+        id: 0,
         name: '',
         email: '',
         adress: '',
@@ -265,13 +273,14 @@ export default {
               showConfirmButton: false,
               timer: 2000,
             });
-          }).catch(e => {
-            console.error("Erro ao excluir usuario:", e);
+          }).catch(error => {
+            console.error("Erro ao excluir o usuário:", error);
             Swal.fire({
-              icon: 'warning',
-              title: 'Ocorreu um erro!',
-              showConfirmButton: true,
-              timer: 2000,
+              icon: "error",
+              title: "Erro ao excluir usuário",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
             });
           });
         }
