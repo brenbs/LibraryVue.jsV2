@@ -4,8 +4,15 @@
       <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
-    <v-data-table :headers="headers" :search="search" :items="livros" :items-per-page="15" sort-by="id"
-      class="elevation-1">
+    <v-data-table 
+    :headers="headers" 
+    :search="search" 
+    :items="books" 
+    :items-per-page="pageSize"
+    :page="page"
+    :server-items-length="total" 
+    @update:options="handleOptionsUpdate" 
+    class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
           <h2>Livros</h2>
@@ -24,15 +31,16 @@
                 </v-card-title>
                 <v-card-text>
                   <v-container>
-                    <v-text-field label="Nome:*" v-model="livro.nome" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Nome:*" v-model="book.name" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="Autor:*" v-model="livro.autor" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Autor:*" v-model="book.author" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-select label="Editora:*" v-model="livro.editora" required :items="editoras" item-text="nome">
+                    <v-select label="Editora:*" v-model="book.publisher" required :items="publishers" item-text="name"
+                      item-value="id">
                     </v-select>
-                    <v-text-field label="Lançamento:*" v-model="livro.lancamento" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Lançamento:*" v-model="book.release" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="quantidade:*" v-model="livro.quantidade" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="quantidade:*" v-model="book.stock" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
                   </v-container>
                 </v-card-text>
@@ -67,14 +75,20 @@
 
 <script>
 import booksApi from '../services/booksApi';
-import editorsApi from '../services/publisherApi';
+import publisherApi from '../services/publisherApi';
 import Swal from 'sweetalert2';
 
 export default {
   data() {
     return {
 
-      //validação
+      searchValue: "",
+      page: 1,
+      pageSize: 5,
+      orderByProperty: "id",
+      total: 0,
+      desc: false,
+      errors: [],
 
       formIsValid: false,
       geralRules: [
@@ -83,12 +97,14 @@ export default {
 
       dialog: false,
 
-      livro: {
+      book: {
         id: '',
-        nome: '',
-        autor: '',
-        lancamento: '',
-        quantidade: '',
+        name: '',
+        author: '',
+        publisher: 0,
+        release: '',
+        stock: '',
+        totalRental:0,
       },
       search: '',
       headers: [
@@ -98,24 +114,24 @@ export default {
           filterable: false,
           value: 'id',
         },
-        { text: 'Nome:', value: 'nome' },
-        { text: 'autor:', value: 'autor' },
-        { text: 'Editora:', value: 'editora.nome' },
-        { text: 'Endereço:', value: 'lancamento' },
-        { text: 'Quantidade:', value: 'quantidade' },
-        { text: 'Total Alugado:', value: 'totalalugado' },
+        { text: 'Nome:', value: 'name' },
+        { text: 'Autor:', value: 'author' },
+        { text: 'Editora:', value: 'publisher.name' },
+        { text: 'Ano de Lançamento:', value: 'release' },
+        { text: 'Quantidade:', value: 'stock' },
+        { text: 'Total Alugado:', value: 'totalRental' },
         { text: 'Ações:', value: 'actions', sortable: false },
       ],
 
-      livros: [],
-      editoras: [],
+      books: [],
+      publishers: [],
       editedItem: {},
       defaultItem: {},
     };
   },
   computed: {
     formTitle() {
-      return !this.livro.id ? 'Novo Livro' : 'Atualizar Livro';
+      return !this.book.id ? 'Novo Livro' : 'Atualizar Livro';
     },
   },
   watch: {
@@ -124,33 +140,72 @@ export default {
         this.close();
       }
     },
-    dialogDelete(val) {
-      if (!val) {
-        this.closeDelete();
-      }
-    },
   },
   methods: {
-    getEditors() {
-      editorsApi.list().then((result) => {
-        this.editoras = result.data;
-      });
+    handleOptionsUpdate(options) {
+      const sortByMapping = {
+        id: "Id",
+        name: "Name",
+        author: "Author",
+        release: "Release",
+        stock: "Stock",
+      };
+      if (options.sortBy[0] || options.sortDesc[0]) {
+        this.orderByProperty = sortByMapping[options.sortBy[0]];
+        this.desc = options.sortDesc[0];
+      } else {
+        this.orderByProperty = "Id";
+        this.desc = false;
+      }
+      this.pageSize = options.itemsPerPage;
+      this.page = options.page;
+      this.total = options.itemsPerPage;
+      this.itemsPerPage = options.itemsPerPage;
+      this.getBooks();
     },
-    getBooks() {
-      booksApi.list().then((result) => {
-        this.livros = result.data;
-      });
+
+    async getEditors() {
+      try {
+        const response = await publisherApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.publishers = response.data.data;
+        this.total = response.data.totalRegisters;
+      } catch {
+        console.error("Erro ao Listar :");
+        this.publishers = [];
+      }
+    },
+
+    async getBooks() {
+      try {
+        const response = await booksApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.books = response.data.data;
+        this.total = response.data.totalRegisters;
+        console.log(this.books);
+      } catch {
+        console.error("Erro ao Listar :");
+        this.books = [];
+      }
     },
     save() {
-      if (!this.livro.id) {
-        const selectPublisher = this.editoras.find((editora) =>
-          editora.nome = this.livro.editora)
+      if (!this.book.id) {
+        const selectPublisher = this.publishers.find((publisher) =>
+          publisher.name = this.book.publisher)
         const bok = {
-          nome: this.livro.nome,
-          autor: this.livro.autor,
-          editora: selectPublisher,
-          lancamento: this.livro.lancamento,
-          quantidade: this.livro.quantidade
+          name: this.book.name,
+          author: this.book.author,
+          publisher: selectPublisher,
+          release: this.book.release,
+          quantidade: this.book.stock
         };
 
         booksApi.save(bok).then(() => {
@@ -165,37 +220,43 @@ export default {
           this.$refs.bookForm.reset();
         })
           .catch(error => {
-            console.log(error.response.data.error)
-            Swal.fire("Erro ao cadastrar o livro.", error.response.data.error, "error");
+            console.log(error.response.data.message)
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao adicionar livro",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
+            });
           });
       }
       else {
-        const selectedPublisher = this.editoras.find(
-          (editora) => editora.nome === this.livro.editora
+        const selectedPublisher = this.publishers.find(
+          (publisher) => publisher.name === this.book.publisher
         );
         const updateBok = {
-          id: this.livro.id,
-          nome: this.livro.nome,
-          autor: this.livro.autor,
-          editora: selectedPublisher
+          id: this.book.id,
+          name: this.book.name,
+          author: this.book.author,
+          publisher: selectedPublisher
             ? { ...selectedPublisher }
-            : this.livro.editora,
-          lancamento: this.livro.lancamento,
-          quantidade: this.livro.quantidade,
+            : this.book.publisher,
+          release: this.book.release,
+          stock: this.book.stock,
         };
 
         booksApi.update(updateBok).then(() => {
-          this.livro = this.livros.map((livro) => {
-            if (livro.id === updateBok.id) {
+          this.book = this.books.map((book) => {
+            if (book.id === updateBok.id) {
               return updateBok;
             } else {
-              return livro;
+              return book;
             }
           });
 
           Swal.fire({
             icon: 'success',
-            title: 'Livro atualizado com sucesso!',
+            title: 'book atualizado com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -204,23 +265,29 @@ export default {
           this.$refs.bookForm.reset();
         })
           .catch(error => {
-            console.error(error.response.data.error);
-            Swal.fire("Erro ao atualizar o livro.", error.response.data.error, "error");
+            console.log(error.response.data.message)
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao adicionar livro",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
+            });
           });
       }
     },
 
     editItem(item) {
-      const selectedPublisher = this.editoras.find(
-        (editora) => editora.nome === item.editora.nome
+      const selectedPublisher = this.publishers.find(
+        (publisher) => publisher.name === item.publisher.name
       );
-      this.livro.id = item.id; //associa os valores do item do modal com os livros da api
-      this.livro.nome = item.nome;
-      this.livro.autor = item.autor;
-      this.livro.editora = selectedPublisher;
-      this.livro.lancamento = item.lancamento;
-      this.livro.quantidade = item.quantidade;
-      this.editedIndex = this.livros.indexOf(item);
+      this.book.id = item.id; //associa os valores do item do modal com os books da api
+      this.book.name = item.name;
+      this.book.author = item.author;
+      this.book.publisher = selectedPublisher;
+      this.book.release = item.release;
+      this.book.stock = item.stock;
+      this.editedIndex = this.books.indexOf(item);
       this.dialog = true;
       this.checkFormValidity();
     },
@@ -232,15 +299,15 @@ export default {
     },
 
     clearForm() {
-      this.livro = {
+      this.book = {
         id: '',
-        nome: '',
-        autor: '',
-        lancamento: '',
-        quantidade: '',
+        name: '',
+        author: '',
+        release: '',
+        stock: '',
       };
     },
-    deleteItem(livro) {
+    deleteItem(book) {
       Swal.fire({
         icon: 'warning',
         title: 'Deseja excluir o livro?',
@@ -252,7 +319,7 @@ export default {
         cancelButtonColor: '#d33',
       }).then(result => {
         if (result.isConfirmed) {
-          booksApi.delete(livro).then(() => {
+          booksApi.delete(book).then(() => {
             this.getBooks();
             this.errors = [];
             Swal.fire({
@@ -261,13 +328,14 @@ export default {
               showConfirmButton: false,
               timer: 2000,
             });
-          }).catch(e => {
-            console.error("Erro ao excluir livro:", e);
+          }).catch(error => {
+            console.log(error.response.data.message)
             Swal.fire({
-              icon: 'warning',
-              title: 'Ocorreu um erro!',
-              showConfirmButton: true,
-              timer: 2000,
+              icon: "error",
+              title: "Erro ao excluir livro",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
             });
           });
         }

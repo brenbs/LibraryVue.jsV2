@@ -2,10 +2,16 @@ import {http} from './config'
 
 export default{
 
- list:()=>{
-  return http.get('rental')
-   //aqui entre aspas é meio q a função que to chamando,no caso a de listar(get) usuarios que é como ta la no swagger
-  //aqui meio que é a "consulta" a API entao todas as funções do CRUD terão uma dessas 
+ list:(params)=>{
+  return http.get('rental/paged',{
+    params:{
+      SearchValue:params.Searchvalue,
+      Page:params.Page,
+      PageSize:params.PageSize,
+      OrderByProperty:params.OrderByProperty,
+      Desc:params.Desc
+    }
+  })
  },
 
  save:(rental)=>{
@@ -13,10 +19,10 @@ export default{
  },
 
  update:(rental)=>{
-  return http.put(`rental/${rental.Id}`,rental)
+  return http.put(`rental/${rental.id}`,rental)
  },
 
  delete:(rental) => {
-  return http.delete(`rental/${rental.Id}`,rental)
+  return http.delete(`rental/${rental.id}`,rental)
  }
 }

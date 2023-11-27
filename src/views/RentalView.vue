@@ -4,7 +4,14 @@
       <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
-    <v-data-table :options="tableOptions" :headers="headers" :search="search" :items="alugueis" :items-per-page="15"
+    <v-data-table  
+    :headers="headers" 
+    :search="search" 
+    :items="rentals" 
+    :items-per-page="pageSize"
+    :page="page"
+    :server-items-length="total" 
+    @update:options="handleOptionsUpdate"
       class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
@@ -24,16 +31,16 @@
                 </v-card-title>
                 <v-card-text>
                   <v-container>
-                    <v-select label="Livro:*" v-model="aluguel.livro_id" required :items="livros" item-text="nome"
-                      :rules="[(v) => !!v || 'Livro é obrigatório']">
+                    <v-select label="Livro:*" v-model="rental.book" required :items="books" item-text="name"
+                    item-value="id">
                     </v-select>
-                    <v-select label="Usuário:*" v-model="aluguel.usuario_id" required :items="usuarios" item-text="nome"
-                      :rules="[(v) => !!v || 'Livro é obrigatório']">
+                    <v-select label="Usuário:*" v-model="rental.user" required :items="users" item-text="name"
+                    item-value="id">
                     </v-select>
-                    <v-text-field label="Data de Aluguel:*" v-model="aluguel.data_aluguel" hide-details="auto" required
+                    <v-text-field label="Data de Aluguel:*" v-model="rental.rentalDate" hide-details="auto" required
                       type="date" :rules="geralRules">
                     </v-text-field>
-                    <v-text-field label="Previsão de Entrega:*" v-model="aluguel.data_previsao" hide-details="auto" required
+                    <v-text-field label="Previsão de Entrega:*" v-model="rental.forecastDate" hide-details="auto" required
                       type="date" :rules="geralRules">
                     </v-text-field>
                   </v-container>
@@ -52,27 +59,39 @@
           </v-dialog>
         </v-toolbar>
       </template>
-      <template v-slot:[`item.data_aluguel`]="{ item }">
-        <td>{{ formatDate(item.data_aluguel) }}</td>
-      </template>
-      <template v-slot:[`item.data_previsao`]="{ item }">
-        <td>{{ formatDate(item.data_previsao) }}</td>
-      </template>
       <template v-slot:[`item.status`]="{ item }">
         <td>
           <v-chip :class="statusClass(item)" class="white--text">{{
-            (item.status = statusCalculado(item))
+            item.status
           }}</v-chip>
         </td>
       </template>
-      <template v-slot:[`item.actions`]="{ item }">
-        <span>
-          <v-icon v-for="icon in getAction(item)" :key="icon" @click="
-            icon === 'mdi-book' ? devItem(item) : icon === 'mdi-delete' ? deleteItem(item) : null
-            ">
-            {{ icon }}
-          </v-icon>
-        </span>
+      <template slot="item.actions" slot-scope="{ item }">
+        <v-btn
+          v-if="item.status == 'Pendente'"
+          text
+          small
+          @click="BookReturn(item)"
+        >
+          <v-icon class="green--text">mdi-book</v-icon>
+        </v-btn>
+      </template>
+      <template v-slot:[`item.rentalDate`]="{ item }">
+        <td>{{ item.rentalDate | formatDate }}</td>
+      </template>
+      <template v-slot:[`item.forecastDate`]="{ item }">
+        <td>{{ item.forecastDate | formatDate }}</td>
+      </template>
+      <template v-slot:[`item.devolutionDate`]="{ item }">
+        <td>
+          {{ item.devolutionDate | formatDate }}
+        </td>
+        <td
+          v-if="item.devolutionDate == null"
+          style="font-style: italic; color: #a2a2a2"
+        >
+          Aguardando...
+        </td>
       </template>
       <template v-slot:no-data>
         <span>Sem dados</span>
@@ -88,10 +107,27 @@ import usersApi from '../services/usersApi'
 import Swal from 'sweetalert2';
 
 export default {
+
+  filters: {
+    formatDate: function (value) {
+      if (value) {
+        const date = new Date(value);
+        return date.toLocaleDateString("pt-BR");
+      }
+      return "";
+    },
+  },
+
   data() {
     return {
 
-      //validação
+      searchValue: "",
+      page: 1,
+      pageSize: 5,
+      orderByProperty: "id",
+      total: 0,
+      desc: false,
+      errors: [],
 
       formIsValid: false,
       geralRules: [
@@ -104,24 +140,18 @@ export default {
 
       dialog: false,
 
-      aluguel: {
+      rental: {
         id: "",
-        livro_id: "",
-        usuario_id: "",
-        data_aluguel: new Date().toISOString().substr(0, 10),
-        data_previsao: "",
-        data_devolucao: "",
+        book: "",
+        user: "",
+        rentalDate: new Date().toISOString().substr(0, 10),
+        forecastDate: "",
+        devolutionDate: "",
         status: "",
-        selectedAlugId: null,
       },
 
 
       search: '',
-
-      tableOptions: {
-        sortBy: ['id'],
-        sortDesc: [true]
-      },
 
       headers: [
         {
@@ -130,17 +160,18 @@ export default {
           filterable: false,
           value: 'id',
         },
-        { text: 'Livro:', value: 'livro_id.nome' },
-        { text: 'Usuário:', value: 'usuario_id.nome' },
-        { text: 'Data de Aluguel:', value: 'data_aluguel' },
-        { text: 'Data de Previsão:', value: 'data_previsao' },
+        { text: 'Livro:', value: 'book.name' },
+        { text: 'Usuário:', value: 'user.name' },
+        { text: 'Data de Aluguel:', value: 'rentalDate' },
+        { text: 'Data de Previsão:', value: 'forecastDate' },
+        { text: 'Data de Devolução:', value: 'devolutionDate' },
         { text: 'Status:', value: 'status' },
         { text: 'Ações:', value: 'actions', sortable: false },
       ],
 
-      alugueis: [],
-      livros: [],
-      usuarios: [],
+      rentals: [],
+      books: [],
+      users: [],
       editedItem: {},
       defaultItem: {},
     };
@@ -151,50 +182,95 @@ export default {
       if (!val) {
         this.close();
       }
-    },
-    dialogDelete(val) {
-      if (!val) {
-        this.closeDelete();
-      }
-    },
+    }
   },
   methods: {
-
-    getRentals() {
-      rentalApi.list().then((result) => {
-        this.alugueis = result.data;
-      });
+    handleOptionsUpdate(options) {
+      const sortByMapping = {
+        id: "Id",
+        userId:"UserId",
+        bookId: "BookId",
+        rentalDate: "RentalDate",
+        forecastDate: "ForecastDate",
+      };
+      if (options.sortBy[0] || options.sortDesc[0]) {
+        this.orderByProperty = sortByMapping[options.sortBy[0]];
+        this.desc = options.sortDesc[0];
+      } else {
+        this.orderByProperty = "Id";
+        this.desc = false;
+      }
+      this.pageSize = options.itemsPerPage;
+      this.page = options.page;
+      this.total = options.itemsPerPage;
+      this.itemsPerPage = options.itemsPerPage;
+      this.getRentals();
     },
 
-    getBooks() {
-      booksApi.list().then((result) => {
-        this.livros = result.data;
-      });
+    async getRentals() {
+      try {
+        const response = await rentalApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.rentals = response.data.data;
+        this.total = response.data.totalRegisters;
+      } catch {
+        console.error("Erro ao Listar :");
+        this.rentals = [];
+      }
     },
 
-    getUsers() {
-      usersApi.list().then((result) => {
-        this.usuarios = result.data;
-      });
+    async getBooks() {
+      try {
+        const response = await booksApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.books = response.data.data;
+        this.total = response.data.totalRegisters;
+        console.log(this.books);
+      } catch {
+        console.error("Erro ao Listar :");
+        this.books = [];
+      }
+    },
+
+    async getUsers() {
+      try {
+        const response = await usersApi.list({
+          Page: this.page,
+          PageSize: this.pageSize,
+          OrderByProperty: this.orderByProperty,
+          SearchValue: this.searchValue,
+        });
+        this.users = response.data.data;
+        this.total = response.data.totalRegisters;
+      } catch {
+        console.error("Erro ao Listar :");
+        this.users = [];
+      }
     },
 
     save() {
-      const selectBook = this.livros.find((livro) =>
-        livro.nome === this.aluguel.livro_id)
+      const selectBook = this.books.find((book) =>
+        book.name === this.rental.book)
 
-      const selectUser = this.usuarios.find((usuario) =>
-        usuario.nome === this.aluguel.usuario_id)
+      const selectUser = this.users.find((user) =>
+        user.name === this.rental.user)
 
       const rentBook = {
-        livro_id: selectBook,
-        usuario_id: selectUser,
-        data_aluguel: this.aluguel.data_aluguel,
-        data_previsao: this.aluguel.data_previsao,
-        status: "Pendente"
+        book: selectBook,
+        user: selectUser,
+        rentalDate: this.rental.rentalDate,
+        forecastDate: this.rental.forecastDate
       };
 
-      rentalApi.save(rentBook).then((response) => {
-        this.alugueis.push({ id: response.data.id, ...rentBook });
+      rentalApi.save(rentBook).then(() => {
         Swal.fire({
           icon: 'success',
           title: 'Aluguel adicionado com sucesso!',
@@ -227,13 +303,13 @@ export default {
       });
     },
 
-    devolver(aluguel) {
-      if (aluguel.data_devolucao == null) {
-        this.selectedAlugId = aluguel.id;
-        this.aluguel.livro_id = aluguel.livro_id;
-        this.aluguel.usuario_id = aluguel.usuario_id;
-        this.data_aluguel = aluguel.data_aluguel;
-        this.data_previsao = aluguel.data_previsao;
+    devolver(rental) {
+      if (rental.devolutionDate == null) {
+        this.selectedAlugId = rental.id;
+        this.rental.bookId = rental.bookId;
+        this.rental.userId = rental.userId;
+        this.rentalDate = rental.rentalDate;
+        this.forecastDate = rental.forecastDate;
         this.confirmDevol();
       } else {
         Swal.fire("O livro já foi devolvido!", "", "error");
@@ -241,27 +317,27 @@ export default {
     },
 
     confirmDevol() {
-      const selectBook = this.livros.find((livro) =>
-        livro.nome === this.aluguel.livro_id)
+      const selectBook = this.books.find((book) =>
+        book.nome === this.rental.bookId)
 
-      const selectUser = this.usuarios.find((usuario) =>
-        usuario.nome === this.aluguel.usuario_id)
+      const selectUser = this.users.find((user) =>
+        user.nome === this.rental.userId)
 
       const RentalDevo = {
         id: this.selectedAlugId,
-        livro_id: selectBook ? { ...selectBook } : this.aluguel.livro_id,
-        usuario_id: selectUser ? { ...selectUser } : this.aluguel.usuario_id,
-        data_aluguel: this.data_aluguel,
-        data_previsao: this.data_previsao,
-        data_devolucao: new Date().toISOString().substr(0, 10),
+        bookId: selectBook ? { ...selectBook } : this.rental.bookId,
+        userId: selectUser ? { ...selectUser } : this.rental.userId,
+        rentalDate: this.rentalDate,
+        forecastDate: this.forecastDate,
+        devolutionDate: new Date().toISOString().substr(0, 10),
         status: "Devolvido",
       };
       rentalApi.update(RentalDevo).then(() => {
-        this.alugueis = this.alugueis.map((aluguel) => {
+        this.rentals = this.rentals.map((rental) => {
           if (this.selectedALugId === RentalDevo.id) {
             return RentalDevo;
           } else {
-            return aluguel;
+            return rental;
           }
         });
         Swal.fire({
@@ -281,13 +357,13 @@ export default {
     },
 
     clearForm() {
-      this.aluguel = {
+      this.rental = {
         id: "",
-        livro_id: "",
-        usuario_id: "",
-        data_aluguel: new Date().toISOString().substr(0, 10),
-        data_previsao: "",
-        data_devolucao: "",
+        bookId: "",
+        userId: "",
+        rentalDate: new Date().toISOString().substr(0, 10),
+        forecastDate: "",
+        devolutionDate: "",
         status: "",
         selectedAlugId: null,
       };
@@ -303,90 +379,14 @@ export default {
         this.save();
       }
     },
-    // calculo do status
-    statusCalculado(aluguel) {
-      const hoje = new Date();
-      const previsao = new Date(aluguel.data_previsao);
-      if (aluguel.data_devolucao === null) {
-        if (hoje > previsao) {
-          return "Em atraso";
-        } else {
-          return "Pendente";
-        }
-      } else {
-        return "Devolvido";
-      }
-    },
     //para dizer a cor do status
-    statusClass(aluguel) {
-      if (aluguel.data_devolucao === null) {
-        const hoje = new Date();
-        const previsao = new Date(aluguel.data_previsao);
-
-        if (hoje > previsao) {
+    statusClass(item) {
+        if (item.status=="Em atraso") {
           return "red";
+        } else if(item.status=="No prazo") {
+          return "green";
         } else {
-          return "yellow";
-        }
-      } else {
-        return "green";
-      }
-    },
-
-    //fomatar as datas para o padrão
-    formatDate(dateString) {
-      const utcDate = new Date(dateString);
-      const localDate = new Date(
-        utcDate.getTime() + utcDate.getTimezoneOffset() * 60000
-      );
-      return localDate.toLocaleDateString("pt-BR");
-    },
-
-    removeRent(aluguelId) {
-      this.alugueis = this.alugueis.filter(
-        (aluguel) => aluguel.id !== aluguelId
-      );
-    },
-
-    deleteItem(aluguel) {
-      Swal.fire({
-        title: "Deletar Aluguel?!",
-        text: "Tem certeza que deseja fazer isso ?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Confirmar",
-        confirmButtonColor: "#1976d2",
-        cancelButtonText: "Cancelar",
-        cancelButtonColor: "#ff5252",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          const deleteRent = {
-            id: aluguel.id,
-            livro_id: aluguel.livro_id,
-            usuario_id: aluguel.usuario_id,
-            data_aluguel: aluguel.data_aluguel,
-            data_previsao: aluguel.data_previsao
-          }
-          rentalApi.delete(aluguel).then(() => {
-            Swal.fire({
-              icon: "success",
-              title: "Deletado com sucesso!",
-              showConfirmButton: false,
-              timer: 2000,
-            });
-            this.removeRent(deleteRent.id);
-          })
-        }
-      })
-    },
-
-    getAction(item) {
-      const devolution = item.data_devolucao;
-
-      if (devolution !== null) {
-        return '';
-      } else if (devolution === null) {
-        return ['mdi-book', 'mdi-delete'];
+        return "yellow";
       }
     },
   },

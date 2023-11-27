@@ -35,7 +35,7 @@
                       required></v-text-field>
                     <v-text-field label="Email:*" v-model="user.email" :rules="emailRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="Endereço:*" v-model="user.adress" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Endereço:*" v-model="user.address" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
                     <v-text-field label="Cidade:*" v-model="user.city" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
@@ -81,7 +81,7 @@ export default {
       searchValue: null,
       page: 1,
       pageSize: 5,
-      orderByPorperty: "id",
+      orderByProperty: "id",
       total: 0,
       desc: false,
       errors: [],
@@ -102,7 +102,7 @@ export default {
         id: '',
         name: '',
         email: '',
-        adress: '',
+        address: '',
         city: '',
       },
       search: '',
@@ -115,7 +115,7 @@ export default {
         },
         { text: 'Nome:', value: 'name' },
         { text: 'Email:', value: 'email' },
-        { text: 'Endereço:', value: 'adress' },
+        { text: 'Endereço:', value: 'address' },
         { text: 'Cidade:', value: 'city' },
         { text: 'Ações:', value: 'actions', sortable: false },
       ],
@@ -142,14 +142,14 @@ export default {
         id: "Id",
         name: "Name",
         email: "Email",
-        adress: "Adress",
+        address: "Address",
         city: "City",
       };
       if (options.sortBy[0] || options.sortDesc[0]) {
-        this.orderByPorperty = sortByMapping[options.sortBy[0]];
+        this.orderByProperty = sortByMapping[options.sortBy[0]];
         this.desc = options.sortDesc[0];
       } else {
-        this.orderByPorperty = "Id";
+        this.orderByProperty = "Id";
         this.desc = false;
       }
       this.pageSize = options.itemsPerPage;
@@ -164,7 +164,7 @@ export default {
         const response = await usersApi.list({
           Page: this.page,
           PageSize: this.pageSize,
-          OrderByPorperty: this.orderByPorperty,
+          OrderByProperty: this.orderByProperty,
           SearchValue: this.searchValue,
         });
         this.users = response.data.data;
@@ -230,7 +230,7 @@ export default {
       this.user.id = item.id;
       this.user.name = item.name;
       this.user.email = item.email;
-      this.user.adress = item.adress;
+      this.user.address = item.address;
       this.user.city = item.city;
       this.editedIndex = this.users.indexOf(item);
       this.dialog = true;
@@ -248,7 +248,7 @@ export default {
         id: 0,
         name: '',
         email: '',
-        adress: '',
+        address: '',
         city: '',
       };
     },

@@ -76,8 +76,8 @@ export default {
 
       searchValue: "",
       page: 1,
-      pageSize: 10,
-      orderByPorperty: "id",
+      pageSize: 5,
+      orderByProperty: "id",
       total: 0,
       desc:false,
       errors: [],
@@ -133,10 +133,10 @@ export default {
         city: "City",
       };
       if (options.sortBy[0] || options.sortDesc[0]) {
-        this.orderByPorperty = sortByMapping[options.sortBy[0]];
+        this.orderByProperty = sortByMapping[options.sortBy[0]];
         this.desc = options.sortDesc[0];
       } else {
-        this.orderByPorperty = "Id";
+        this.orderByProperty = "Id";
         this.desc = false;
       }
       this.pageSize = options.itemsPerPage;
@@ -151,8 +151,9 @@ export default {
         const response = await publisherApi.list({
           Page: this.page,
           PageSize: this.pageSize,
-          OrderByPorperty: this.orderByPorperty,
+          OrderByProperty: this.orderByProperty,
           SearchValue: this.searchValue,
+          Desc:this.desc,
         });
         this.publishers = response.data.data;
         this.total = response.data.totalRegisters;

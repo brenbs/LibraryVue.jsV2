@@ -8,7 +8,8 @@ export default{
       SearchValue:params.Searchvalue,
       Page:params.Page,
       PageSize:params.PageSize,
-      OrderByPorperty:params.OrderByPorperty,
+      OrderByProperty:params.OrderByProperty,
+      Desc:params.Desc,
     }
   })
    //aqui entre aspas é meio q a função que to chamando,no caso a de listar(get) usuarios que é como ta la no swagger

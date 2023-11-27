@@ -8,7 +8,8 @@ export default{
       SearchValue:params.Searchvalue,
       Page:params.Page,
       PageSize:params.PageSize,
-      OrderByPorperty:params.OrderByPorperty,
+      OrderByProperty:params.OrderByProperty,
+      Desc:params.Desc
     }
   })
  },
