@@ -14,6 +14,10 @@ export default{
   })
  },
 
+ dashList:()=>{
+  return http.get('user/dash')
+ },
+
  save:(user)=>{
   return http.post('user',user)
  },

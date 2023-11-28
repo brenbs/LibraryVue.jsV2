@@ -4,15 +4,21 @@
       <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
-    <v-data-table  
+    <v-data-table 
     :headers="headers" 
     :search="search" 
     :items="rentals" 
-    :items-per-page="pageSize"
+    :items-per-page="pageSize" 
     :page="page"
+    :loading="loadingTable"
     :server-items-length="total" 
-    @update:options="handleOptionsUpdate"
-      class="elevation-1">
+    @update:options="handleOptionsUpdate" 
+    :footer-props="{
+        itemsPerPageOptions: [5, 10, 25, this.total],
+        itemsPerPageText: 'Linhas por página',
+        pageText: '{0}-{1} de {2}',
+      }" 
+    class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
           <h2>Aluguéis</h2>
@@ -24,21 +30,21 @@
                 Novo aluguel
               </v-btn>
             </template>
-            <v-form ref="form" @submit.prevent="save">
+            <v-form ref="rentalForm" @submit.prevent="save">
               <v-card>
                 <v-card-title>
                   <span class="text-h5">Novo Aluguel:</span>
                 </v-card-title>
                 <v-card-text>
                   <v-container>
-                    <v-select label="Livro:*" v-model="rental.book" required :items="books" item-text="name"
-                    item-value="id">
-                    </v-select>
-                    <v-select label="Usuário:*" v-model="rental.user" required :items="users" item-text="name"
-                    item-value="id">
-                    </v-select>
+                    <v-autocomplete label="Livro:*" v-model="rental.book" required :items="books" item-text="name"
+                      item-value="id">
+                    </v-autocomplete>
+                    <v-autocomplete label="Usuário:*" v-model="rental.user" required :items="users" item-text="name"
+                      item-value="id">
+                    </v-autocomplete>
                     <v-text-field label="Data de Aluguel:*" v-model="rental.rentalDate" hide-details="auto" required
-                      type="date" :rules="geralRules">
+                      type="date" :rules="geralRules" >
                     </v-text-field>
                     <v-text-field label="Previsão de Entrega:*" v-model="rental.forecastDate" hide-details="auto" required
                       type="date" :rules="geralRules">
@@ -47,7 +53,7 @@
                 </v-card-text>
                 <v-card-actions>
                   <v-spacer></v-spacer>
-                  <v-btn color="blue darken-1" text @click="close">
+                  <v-btn color="error" text @click="close">
                     Cancelar
                   </v-btn>
                   <v-btn color="blue darken-1" text @click="addRental">
@@ -67,12 +73,7 @@
         </td>
       </template>
       <template slot="item.actions" slot-scope="{ item }">
-        <v-btn
-          v-if="item.status == 'Pendente'"
-          text
-          small
-          @click="BookReturn(item)"
-        >
+        <v-btn v-if="item.status == 'Pendente'" text small @click="BookReturn(item)">
           <v-icon class="green--text">mdi-book</v-icon>
         </v-btn>
       </template>
@@ -86,11 +87,8 @@
         <td>
           {{ item.devolutionDate | formatDate }}
         </td>
-        <td
-          v-if="item.devolutionDate == null"
-          style="font-style: italic; color: #a2a2a2"
-        >
-          Aguardando...
+        <td v-if="item.devolutionDate == null" style="font-style: italic; color: #a2a2a2">
+          ...
         </td>
       </template>
       <template v-slot:no-data>
@@ -121,6 +119,10 @@ export default {
   data() {
     return {
 
+      headerProps: {
+        sortByText: "Ordenar por",
+      },
+
       searchValue: "",
       page: 1,
       pageSize: 5,
@@ -131,10 +133,6 @@ export default {
 
       formIsValid: false,
       geralRules: [
-        v => !!v || 'Campo obrigatório',
-      ],
-
-      dateRentRules: [
         v => !!v || 'Campo obrigatório',
       ],
 
@@ -149,8 +147,7 @@ export default {
         devolutionDate: "",
         status: "",
       },
-
-
+      loadingTable:true,
       search: '',
 
       headers: [
@@ -188,7 +185,7 @@ export default {
     handleOptionsUpdate(options) {
       const sortByMapping = {
         id: "Id",
-        userId:"UserId",
+        userId: "UserId",
         bookId: "BookId",
         rentalDate: "RentalDate",
         forecastDate: "ForecastDate",
@@ -220,6 +217,8 @@ export default {
       } catch {
         console.error("Erro ao Listar :");
         this.rentals = [];
+      }finally {
+        this.loadingTable = false;
       }
     },
 
@@ -257,15 +256,10 @@ export default {
     },
 
     save() {
-      const selectBook = this.books.find((book) =>
-        book.name === this.rental.book)
-
-      const selectUser = this.users.find((user) =>
-        user.name === this.rental.user)
-
+      
       const rentBook = {
-        book: selectBook,
-        user: selectUser,
+        bookId: this.rental.book,
+        userId: this.rental.user,
         rentalDate: this.rental.rentalDate,
         forecastDate: this.rental.forecastDate
       };
@@ -280,80 +274,52 @@ export default {
         this.getRentals();
         this.close();
       })
-        .catch(error => {
-          console.error(error.response.data.error);
-          Swal.fire("Erro!", error.response.data.error, "error");
-        });
+        .catch(error =>  {
+            console.log(error.response.data.message)
+            Swal.fire({
+              icon: "error",
+              title: "Erro ao adicionar aluguél",
+              text: error.response.data.message,
+              showConfirmButton: false,
+              timer: 3000,
+            });
+          });
     },
 
-    devItem(item) {
+    BookReturn(item) {
       Swal.fire({
-        title: "Devolver livro?!",
-        text: "Tem certeza que deseja fazer isso ?",
         icon: "warning",
+        title: "Deseja Devolver o livro?",
+        text: "Essa ação não pode ser desfeita!",
         showCancelButton: true,
-        confirmButtonText: "Confirmar",
-        confirmButtonColor: "#1976d2",
-        cancelButtonText: "Cancelar",
-        cancelButtonColor: "#ff5252",
+        confirmButtonText: "Sim",
+        cancelButtonText: "Não",
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
       }).then((result) => {
         if (result.isConfirmed) {
-          this.devolver(item);
+          const returnRental = {
+            id: item.id,
+            devolutionDate: new Date().toISOString().substr(0, 10),
+          };
+          rentalApi.update(returnRental).then(() => {
+            Swal.fire({
+              icon: "success",
+              title: "Livro devolvido com sucesso!",
+              showConfirmButton: false,
+              timer: 2000,
+            });
+
+            this.getRentals();
+          });
         }
-      });
-    },
-
-    devolver(rental) {
-      if (rental.devolutionDate == null) {
-        this.selectedAlugId = rental.id;
-        this.rental.bookId = rental.bookId;
-        this.rental.userId = rental.userId;
-        this.rentalDate = rental.rentalDate;
-        this.forecastDate = rental.forecastDate;
-        this.confirmDevol();
-      } else {
-        Swal.fire("O livro já foi devolvido!", "", "error");
-      }
-    },
-
-    confirmDevol() {
-      const selectBook = this.books.find((book) =>
-        book.nome === this.rental.bookId)
-
-      const selectUser = this.users.find((user) =>
-        user.nome === this.rental.userId)
-
-      const RentalDevo = {
-        id: this.selectedAlugId,
-        bookId: selectBook ? { ...selectBook } : this.rental.bookId,
-        userId: selectUser ? { ...selectUser } : this.rental.userId,
-        rentalDate: this.rentalDate,
-        forecastDate: this.forecastDate,
-        devolutionDate: new Date().toISOString().substr(0, 10),
-        status: "Devolvido",
-      };
-      rentalApi.update(RentalDevo).then(() => {
-        this.rentals = this.rentals.map((rental) => {
-          if (this.selectedALugId === RentalDevo.id) {
-            return RentalDevo;
-          } else {
-            return rental;
-          }
-        });
-        Swal.fire({
-          icon: "success",
-          title: "Devolução realizada com sucesso!",
-          showConfirmButton: false,
-          timer: 2000,
-        });
-        this.getRentals();
       });
     },
 
     close() {
       this.dialog = false;
       this.clearForm();
-      this.$refs.form.reset()
+      this.$refs.rentalForm.resetValidation()
     },
 
     clearForm() {
@@ -365,7 +331,6 @@ export default {
         forecastDate: "",
         devolutionDate: "",
         status: "",
-        selectedAlugId: null,
       };
     },
 
@@ -379,13 +344,13 @@ export default {
         this.save();
       }
     },
-    //para dizer a cor do status
+
     statusClass(item) {
-        if (item.status=="Em atraso") {
-          return "red";
-        } else if(item.status=="No prazo") {
-          return "green";
-        } else {
+      if (item.status == "Em atraso") {
+        return "red";
+      } else if (item.status == "No prazo") {
+        return "green";
+      } else {
         return "yellow";
       }
     },
@@ -398,3 +363,12 @@ export default {
   },
 };
 </script>
+<style >
+.swal2-popup {
+  font-family: "Arial", sans-serif;
+}
+
+.swal2-title {
+  font-size: 31px;
+}
+</style>

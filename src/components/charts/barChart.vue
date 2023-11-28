@@ -2,8 +2,8 @@
   <v-flex>
     <div class="flexbox">
       <div class="chart_container">
-        <span class="title text-center">Livros mais alugados</span>
-        <canvas ref="myChart" id="myChart"></canvas>
+        <div class="title text-center">Livros mais alugados</div>
+        <canvas ref="myChart" id="myChart" height="50"></canvas>
       </div>
     </div>
   </v-flex>
@@ -11,51 +11,46 @@
 
 <script>
 import Chart from "chart.js";
-import rentalApi from "@/services/rentalApi";
+import booksApi from '../../services/booksApi';
 
 export default {
   data: () => ({
-    alugueis: [],
-    maisalugados: [],
+    books: [],
   }),
   mounted() {
-    this.getRentals();
+    this.getBooks();
   },
   methods: {
-    getRentals() {
-      rentalApi.list().then((result) => {
-        this.alugueis = result.data;
-        this.CalcMaisAlug();
-      });
+    async getBooks() {
+      try {
+        const mostBooks = await booksApi.dashList();
+
+        this.books = mostBooks.data.data.slice(0, 4).map((item) => ({
+          label: item.name,
+          data: item.totalRental,
+        }));
+        this.books.sort((a, b) => b.data - a.data);
+        console.log(this.books);
+        this.upCharts();
+      } catch (error) {
+        console.error("Erro ao buscar os livros  mais alugados:", error);
+      }
     },
 
-    CalcMaisAlug() {
-      const AlugsCount = {};
-      this.alugueis.forEach((alug) => {
-        const livronome = alug.livro_id.nome;
-        if (AlugsCount[livronome]) {
-          AlugsCount[livronome]++;
-        } else {
-          AlugsCount[livronome] = 1;
-        }
-      });
-      this.maisalugados = Object.keys(AlugsCount)
-        .sort((a, b) => AlugsCount[b] - AlugsCount[a])
-        .map((livronome) => ({ livronome, quantidade: AlugsCount[livronome] }));
-    },
     upCharts() {
-      
+      if (!this.books) return;
+      const labels = this.books.map((item) => item.label);
+      const data = this.books.map((item) => item.data);
       const ctx = this.$refs.myChart.getContext("2d");
       new Chart(ctx, {
         type: "bar",
         data: {
-          labels: this.maisalugados.slice(0, 4).map((livro) => livro.livronome),
+          labels: labels,
           datasets: [
             {
               label: "Quantidade Alugada",
-              data: this.maisalugados
-                .slice(0, 4)
-                .map((livro) => livro.quantidade),
+              data: data,
+              fill: false,
               backgroundColor: [
                 "rgb(255, 99, 132)",
                 "rgb(54, 162, 235)",
@@ -63,36 +58,49 @@ export default {
                 "rgb(75, 192, 192)",
                 "rgb(153, 102, 255)",
               ],
+              borderColor: [
+                "rgba(255, 99, 132, 1)",
+                "rgba(54, 162, 235, 1)",
+                "rgba(255, 206, 86, 1)",
+                "rgba(75, 192, 192, 1)",
+                "rgba(153, 102, 255, 1)",
+                "rgba(255, 159, 64, 1)",
+              ],
+              borderWidth: 0,
             },
           ],
         },
         options: {
+          scales: {
+            yAxes: [
+              {
+                ticks: {
+                  display: false,
+                },
+                gridLines: {
+                  display: false,
+                },
+              },
+            ],
+            xAxes: [
+              {
+                gridLines: {
+                  display: false,
+                },
+              },
+            ],
+          },
+         
           legend: {
             display: false,
           },
-
-          scales: {
-            x: {
-              ticks: {
-                callback: function (value) {
-                  // Dividir o rótulo em várias linhas usando "\n"
-                  return value.split("\n");
-                },
-                autoSkip: false,
-              },
-            },
-            y: {
-              beginAtZero: true,
-            },
-          },
           maintainAspectRatio: false,
-          aspectRatio: 1,
         },
       });
     },
   },
   watch: {
-    alugueis: {
+    rentals: {
       handler() {
         this.upCharts();
       },
@@ -116,3 +124,4 @@ export default {
   justify-content: center;
 }
 </style>
+

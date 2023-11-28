@@ -14,6 +14,10 @@ export default{
  })
  },
 
+ dashList:()=>{
+  return http.get('book/dash')
+ },
+
  save:(book)=>{
   return http.post('book',book)
  },

@@ -8,7 +8,7 @@
             mdi-account
           </v-icon>
           Usuários:
-          {{ usuarios.length }}
+          {{ users.length }}
         </v-card>
       </v-col>
       <v-col cols="12" md="3">
@@ -17,7 +17,7 @@
             mdi-domain
           </v-icon>
           Editoras:
-          {{ editoras.length }}
+          {{ publishers.length }}
         </v-card>
       </v-col>
       <v-col>
@@ -26,16 +26,16 @@
             mdi-book
           </v-icon>
           Livros:
-          {{ livros.length }}
+          {{ books.length }}
         </v-card>
       </v-col>
       <v-col>
-        <v-card class="pa-4 text-center text-no-wrap rounded blue darken-4 qnts" to="/Rentals">
+        <v-card class="pa-4 text-center text-no-wrap rounded blue darken-4 qnts" to="/Rental">
           <v-icon dark>
             mdi-pencil
           </v-icon>
           Aluguéis:
-          {{ alugueis.length }}
+          {{ rentals.length }}
         </v-card>
       </v-col>
     </v-row>
@@ -55,6 +55,11 @@
               :headers="headers"
               :items="filteredBooks"
               :items-per-page="5"
+              :footer-props="{
+                itemsPerPageOptions: [5, 10],
+                itemsPerPageText: 'Linhas por página',
+                pageText: '{0}-{1} de {2}',
+              }"
               class="elevation-1"
             ></v-data-table>
           </tbody>
@@ -67,7 +72,7 @@
 </template>
  
 <script>
-import editorsApi from '../services/publisherApi';
+import publisherApi from '../services/publisherApi';
 import usersApi from '../services/usersApi';
 import rentalApi from '../services/rentalApi';
 import booksApi from '../services/booksApi';
@@ -84,40 +89,44 @@ export default {
 
   data() {
     return {
+
+      headerProps: {
+        sortByText: "Ordenar por",
+      },
+
       headers: [
-        { text: 'Nome', value: 'nome' },
-        { text: 'Quantidade', value: 'quantidade' },       
+        { text: 'Nome', value: 'name' },
+        { text: 'Quantidade', value: 'stock' },       
       ],
 
-      editoras: [],
-      alugueis: [],
-      livros: [],
-      usuarios: [],
+      publishers: [],
+      rentals: [],
+      books: [],
+      users: [],
     }
   },
   methods: {
     getBooks() { 
-      booksApi.list().then((result) => {
-       this.livros = result.data;
+      booksApi.dashList().then((response) => {
+       this.books = response.data.data;
       })
     },
 
     getEditors() {
-      editorsApi.list().then((result) => {
-        this.editoras = result.data;
+      publisherApi.dashList().then((response) => {
+        this.publishers = response.data.data;
       }); 
     },
 
     getRentals() {
-      rentalApi.list().then((result) => {
-        this.alugueis = result.data;
+      rentalApi.dashList().then((response) => {
+        this.rentals = response.data.data;
       });
     },
-
     
     getUsers() {
-      usersApi.list().then((result) => {
-        this.usuarios = result.data;
+      usersApi.dashList().then((response) => {
+        this.users = response.data.data;
       });
     },
   },
@@ -131,7 +140,7 @@ export default {
 
   computed:{
     filteredBooks() {
-      return this.livros.filter(livro => livro.quantidade < 6);
+      return this.books.filter(book => book.stock < 6);
     },
   }
 }

@@ -10,8 +10,14 @@
     :items="books" 
     :items-per-page="pageSize"
     :page="page"
+    :loading="loadingTable"
     :server-items-length="total" 
     @update:options="handleOptionsUpdate" 
+    :footer-props="{
+        itemsPerPageOptions: [5, 10, 25, this.total],
+        itemsPerPageText: 'Linhas por página',
+        pageText: '{0}-{1} de {2}',
+      }" 
     class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
@@ -35,9 +41,9 @@
                       required></v-text-field>
                     <v-text-field label="Autor:*" v-model="book.author" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-select label="Editora:*" v-model="book.publisher" required :items="publishers" item-text="name"
+                    <v-autocomplete label="Editora:*" v-model="book.publisher" required :items="publishers" item-text="name"
                       item-value="id">
-                    </v-select>
+                    </v-autocomplete>
                     <v-text-field label="Lançamento:*" v-model="book.release" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
                     <v-text-field label="quantidade:*" v-model="book.stock" :rules="geralRules" hide-details="auto"
@@ -46,7 +52,7 @@
                 </v-card-text>
                 <v-card-actions>
                   <v-spacer></v-spacer>
-                  <v-btn color="blue darken-1" text @click="close">
+                  <v-btn color="error" text @click="close">
                     Cancelar
                   </v-btn>
                   <v-btn color="blue darken-1" text @click="addBook">
@@ -82,6 +88,10 @@ export default {
   data() {
     return {
 
+      headerProps: {
+        sortByText: "Ordenar por",
+      },
+
       searchValue: "",
       page: 1,
       pageSize: 5,
@@ -106,6 +116,7 @@ export default {
         stock: '',
         totalRental:0,
       },
+      loadingTable:true,
       search: '',
       headers: [
         {
@@ -194,24 +205,24 @@ export default {
       } catch {
         console.error("Erro ao Listar :");
         this.books = [];
+      }finally {
+        this.loadingTable = false;
       }
     },
     save() {
       if (!this.book.id) {
-        const selectPublisher = this.publishers.find((publisher) =>
-          publisher.name = this.book.publisher)
-        const bok = {
+        const createBook = {
           name: this.book.name,
           author: this.book.author,
-          publisher: selectPublisher,
+          publisherId: this.book.publisher,
           release: this.book.release,
-          quantidade: this.book.stock
+          stock: this.book.stock
         };
 
-        booksApi.save(bok).then(() => {
+        booksApi.save(createBook).then(() => {
           Swal.fire({
             icon: 'success',
-            title: 'livro adicionada com sucesso!',
+            title: 'livro adicionado com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -231,16 +242,11 @@ export default {
           });
       }
       else {
-        const selectedPublisher = this.publishers.find(
-          (publisher) => publisher.name === this.book.publisher
-        );
         const updateBok = {
           id: this.book.id,
           name: this.book.name,
           author: this.book.author,
-          publisher: selectedPublisher
-            ? { ...selectedPublisher }
-            : this.book.publisher,
+          publisherId:this.book.publisher,
           release: this.book.release,
           stock: this.book.stock,
         };
@@ -256,7 +262,7 @@ export default {
 
           Swal.fire({
             icon: 'success',
-            title: 'book atualizado com sucesso!',
+            title: 'Livro atualizado com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -278,13 +284,10 @@ export default {
     },
 
     editItem(item) {
-      const selectedPublisher = this.publishers.find(
-        (publisher) => publisher.name === item.publisher.name
-      );
-      this.book.id = item.id; //associa os valores do item do modal com os books da api
+      this.book.id = item.id; 
       this.book.name = item.name;
       this.book.author = item.author;
-      this.book.publisher = selectedPublisher;
+      this.book.publisher = item.publisherId;
       this.book.release = item.release;
       this.book.stock = item.stock;
       this.editedIndex = this.books.indexOf(item);

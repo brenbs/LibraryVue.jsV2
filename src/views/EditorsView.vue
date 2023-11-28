@@ -10,8 +10,14 @@
     :items="publishers" 
     :items-per-page="pageSize" 
     :page="page"
+    :loading="loadingTable"
     :server-items-length="total" 
     @update:options="handleOptionsUpdate"
+    :footer-props="{
+        itemsPerPageOptions: [5, 10, 25, this.total],
+        itemsPerPageText: 'Linhas por página',
+        pageText: '{0}-{1} de {2}',
+      }" 
     class="elevation-1">
       <template v-slot:top>
         <v-toolbar flat>
@@ -39,7 +45,7 @@
                 </v-card-text>
                 <v-card-actions>
                   <v-spacer></v-spacer>
-                  <v-btn color="blue darken-1" text @click="close">
+                  <v-btn color="error" text @click="close">
                     Cancelar
                   </v-btn>
                   <v-btn color="blue darken-1" text @click="addEditor">
@@ -74,6 +80,11 @@ export default {
   data() {
     return {
 
+      headerProps: {
+        sortByText: "Ordenar por",
+      },
+      
+
       searchValue: "",
       page: 1,
       pageSize: 5,
@@ -94,6 +105,7 @@ export default {
         name: '',
         city: '',
       },
+      loadingTable:true,
       headers: [
         {
           text: 'Id:',
@@ -160,6 +172,8 @@ export default {
       } catch {
         console.error("Erro ao Listar :");
         this.publishers = [];
+      }finally {
+        this.loadingTable = false;
       }
     },
 
