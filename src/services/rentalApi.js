@@ -5,7 +5,7 @@ export default{
  list:(params)=>{
   return http.get('rental/paged',{
     params:{
-      SearchValue:params.Searchvalue,
+      SearchValue:params.SearchValue,
       Page:params.Page,
       PageSize:params.PageSize,
       OrderByProperty:params.OrderByProperty,

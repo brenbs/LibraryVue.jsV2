@@ -5,7 +5,7 @@ export default{
  list:(params)=>{
   return http.get('publisher/paged',{
     params:{
-      SearchValue:params.Searchvalue,
+      SearchValue:params.SearchValue,
       Page:params.Page,
       PageSize:params.PageSize,
       OrderByProperty:params.OrderByProperty,
@@ -18,6 +18,10 @@ export default{
 
  dashList:()=>{
   return http.get('publisher/dash')
+ },
+
+ selectList:()=>{
+  return http.get('publisher/select')
  },
 
  save:(publisher)=>{

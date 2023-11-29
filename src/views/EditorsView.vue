@@ -87,7 +87,7 @@ export default {
 
       searchValue: "",
       page: 1,
-      pageSize: 5,
+      pageSize: 7,
       orderByProperty: "id",
       total: 0,
       desc:false,
@@ -133,7 +133,7 @@ export default {
         this.close();
       }
     },
-    searchValue: function(){
+    searchValue:function(){
     this.getEditors();
     },
   },
@@ -169,6 +169,7 @@ export default {
         });
         this.publishers = response.data.data;
         this.total = response.data.totalRegisters;
+        console.log(response);
       } catch {
         console.error("Erro ao Listar :");
         this.publishers = [];
@@ -255,10 +256,10 @@ export default {
         title: 'Deseja excluira editora?',
         text: 'Essa ação não pode ser desfeita!',
         showCancelButton: true,
-        confirmButtonText: 'Sim',
-        cancelButtonText: 'Não',
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
+        confirmButtonText: 'Excluir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
       }).then(result => {
         if (result.isConfirmed) {
           publisherApi.delete(publisher).then(() => {
@@ -270,6 +271,7 @@ export default {
               showConfirmButton: false,
               timer: 2000,
             });
+            this.page=1
           }).catch(error => {
             console.error("Erro ao excluir a editora:", error);
             Swal.fire({

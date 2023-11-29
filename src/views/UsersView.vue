@@ -1,12 +1,12 @@
 <template>
   <v-card>
     <v-card-title>
-      <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
+      <v-text-field v-model="searchValue" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
     <v-data-table 
     :headers="headers" 
-    :search="search"
+    :search="searchValue"
     :items="users" 
     :items-per-page="pageSize"
     :page="page"
@@ -88,7 +88,7 @@ export default {
         sortByText: "Ordenar por",
       },
       
-      searchValue: null,
+      searchValue: '',
       page: 1,
       pageSize: 5,
       orderByProperty: "id",
@@ -116,7 +116,6 @@ export default {
         city: '',
       },
       loadingTable:true,
-      search: '',
       headers: [
         {
           text: 'Id:',
@@ -145,6 +144,9 @@ export default {
       if (!val) {
         this.close();
       }
+    },
+    searchValue:function(){
+    this.getUsers();
     },
   },
   methods: {
@@ -271,10 +273,10 @@ export default {
         title: 'Deseja excluir o usuário?',
         text: 'Essa ação não pode ser desfeita!',
         showCancelButton: true,
-        confirmButtonText: 'Sim',
-        cancelButtonText: 'Não',
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
+        confirmButtonText: 'Excluir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
       }).then(result => {
         if (result.isConfirmed) {
           usersApi.delete(user).then(() => {

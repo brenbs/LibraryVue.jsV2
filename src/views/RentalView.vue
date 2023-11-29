@@ -122,8 +122,9 @@ export default {
       headerProps: {
         sortByText: "Ordenar por",
       },
-
+  
       searchValue: "",
+      search:"",
       page: 1,
       pageSize: 5,
       orderByProperty: "id",
@@ -148,7 +149,6 @@ export default {
         status: "",
       },
       loadingTable:true,
-      search: '',
 
       headers: [
         {
@@ -179,9 +179,46 @@ export default {
       if (!val) {
         this.close();
       }
+    } ,
+    search:function(){
+      const dateRegex = /^(\d{1,2})\/?(\d{1,2})?\/?(\d{0,4})?$/;
+      this.page = 1;
+      this.searchValue=this.search;
+
+      if (dateRegex.test(this.search)) {
+        this.searchValue = this.parseDate(this.search);
+      } else if (this.search.match(/^\d{1,2}\/$/)) {
+        this.searchValue = this.parseDate(this.search);
+      }
+      this.getRentals();
+      console.log(this.searchValue);
     }
   },
   methods: {
+    parseDate(date) {
+      const dateParts = date.split("/");
+      let formattedDate = "";
+
+      if (dateParts.length >= 1) {
+        const day = dateParts[0];
+        formattedDate = `${day}`;
+      }
+
+      if (dateParts.length >= 2) {
+        const month = dateParts[1];
+        if (month.length === 2) {
+        formattedDate = `${month}-${formattedDate}`;
+        }
+      }
+
+      if (dateParts.length >= 3) {
+        const year = dateParts[2];
+        if (year.length === 4) {
+          formattedDate = `${year}-${formattedDate}`;
+        }
+      }
+      return formattedDate;
+    },
     handleOptionsUpdate(options) {
       const sortByMapping = {
         id: "Id",
@@ -222,39 +259,17 @@ export default {
       }
     },
 
-    async getBooks() {
-      try {
-        const response = await booksApi.list({
-          Page: this.page,
-          PageSize: this.pageSize,
-          OrderByProperty: this.orderByProperty,
-          SearchValue: this.searchValue,
-        });
-        this.books = response.data.data;
-        this.total = response.data.totalRegisters;
-        console.log(this.books);
-      } catch {
-        console.error("Erro ao Listar :");
-        this.books = [];
-      }
+    getBooks() { 
+      booksApi.selectList().then((response) => {
+       this.books = response.data.data;
+      })
     },
 
-    async getUsers() {
-      try {
-        const response = await usersApi.list({
-          Page: this.page,
-          PageSize: this.pageSize,
-          OrderByProperty: this.orderByProperty,
-          SearchValue: this.searchValue,
-        });
+    getUsers() {
+      usersApi.selectList().then((response) => {
         this.users = response.data.data;
-        this.total = response.data.totalRegisters;
-      } catch {
-        console.error("Erro ao Listar :");
-        this.users = [];
-      }
+      });
     },
-
     save() {
       
       const rentBook = {

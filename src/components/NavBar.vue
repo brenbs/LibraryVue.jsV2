@@ -6,10 +6,6 @@
           <img src="/altislab.png" alt="AltisLab logo">
         </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn text  to="/">
-        <span>Voltar</span>
-        <v-icon right>mdi-exit-to-app</v-icon>
-      </v-btn>
       </v-app-bar>
       <v-navigation-drawer v-model="drawer" dark app class="blue darken-4">
         <v-layout column align-center>

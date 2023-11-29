@@ -1,12 +1,12 @@
 <template>
   <v-card>
     <v-card-title>
-      <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
+      <v-text-field v-model="searchValue" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
     <v-data-table 
     :headers="headers" 
-    :search="search" 
+    :search="searchValue" 
     :items="books" 
     :items-per-page="pageSize"
     :page="page"
@@ -117,7 +117,6 @@ export default {
         totalRental:0,
       },
       loadingTable:true,
-      search: '',
       headers: [
         {
           text: 'Id:',
@@ -151,6 +150,9 @@ export default {
         this.close();
       }
     },
+     searchValue:function(){
+    this.getBooks();
+    },
   },
   methods: {
     handleOptionsUpdate(options) {
@@ -175,20 +177,10 @@ export default {
       this.getBooks();
     },
 
-    async getEditors() {
-      try {
-        const response = await publisherApi.list({
-          Page: this.page,
-          PageSize: this.pageSize,
-          OrderByProperty: this.orderByProperty,
-          SearchValue: this.searchValue,
-        });
+    getEditors() {
+      publisherApi.selectList().then((response) => {
         this.publishers = response.data.data;
-        this.total = response.data.totalRegisters;
-      } catch {
-        console.error("Erro ao Listar :");
-        this.publishers = [];
-      }
+      }); 
     },
 
     async getBooks() {
@@ -316,10 +308,10 @@ export default {
         title: 'Deseja excluir o livro?',
         text: 'Essa ação não pode ser desfeita!',
         showCancelButton: true,
-        confirmButtonText: 'Sim',
-        cancelButtonText: 'Não',
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
+        confirmButtonText: 'Excluir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
       }).then(result => {
         if (result.isConfirmed) {
           booksApi.delete(book).then(() => {

@@ -5,7 +5,7 @@ export default{
  list:(params)=>{
   return http.get('user/paged',{
     params:{
-      SearchValue:params.Searchvalue,
+      SearchValue:params.SearchValue,
       Page:params.Page,
       PageSize:params.PageSize,
       OrderByProperty:params.OrderByProperty,
@@ -16,6 +16,10 @@ export default{
 
  dashList:()=>{
   return http.get('user/dash')
+ },
+
+ selectList:()=>{
+  return http.get('user/select')
  },
 
  save:(user)=>{
