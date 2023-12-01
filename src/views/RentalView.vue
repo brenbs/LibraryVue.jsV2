@@ -248,6 +248,7 @@ export default {
           PageSize: this.pageSize,
           OrderByProperty: this.orderByProperty,
           SearchValue: this.searchValue,
+          Desc:this.desc,
         });
         this.rentals = response.data.data;
         this.total = response.data.totalRegisters;

@@ -190,6 +190,7 @@ export default {
           PageSize: this.pageSize,
           OrderByProperty: this.orderByProperty,
           SearchValue: this.searchValue,
+          Desc:this.desc,
         });
         this.books = response.data.data;
         this.total = response.data.totalRegisters;

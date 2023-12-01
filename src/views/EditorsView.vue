@@ -87,7 +87,7 @@ export default {
 
       searchValue: "",
       page: 1,
-      pageSize: 7,
+      pageSize: 5,
       orderByProperty: "id",
       total: 0,
       desc:false,
