@@ -222,10 +222,11 @@ export default {
     handleOptionsUpdate(options) {
       const sortByMapping = {
         id: "Id",
-        userId: "UserId",
-        bookId: "BookId",
+        "user.name": "User.Name",
+        "book.name": "Book.Name",
         rentalDate: "RentalDate",
         forecastDate: "ForecastDate",
+        status:"Status"
       };
       if (options.sortBy[0] || options.sortDesc[0]) {
         this.orderByProperty = sortByMapping[options.sortBy[0]];
@@ -297,7 +298,7 @@ export default {
               title: "Erro ao adicionar aluguél",
               text: error.response.data.message,
               showConfirmButton: false,
-              timer: 3000,
+              timer: 5000,
             });
           });
     },

@@ -160,12 +160,15 @@ export default {
         id: "Id",
         name: "Name",
         author: "Author",
+        "publisher.name":"Publisher.Name",
         release: "Release",
+        totalRental:"TotalRental",
         stock: "Stock",
       };
       if (options.sortBy[0] || options.sortDesc[0]) {
         this.orderByProperty = sortByMapping[options.sortBy[0]];
         this.desc = options.sortDesc[0];
+        console.log(this.orderByProperty);
       } else {
         this.orderByProperty = "Id";
         this.desc = false;
