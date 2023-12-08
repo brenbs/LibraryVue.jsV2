@@ -196,7 +196,7 @@ export default {
         usersApi.save(this.user).then((response) => {
           Swal.fire({
             icon: 'success',
-            title: 'usuario adicionado com sucesso!',
+            title: 'Usuário adicionado com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
@@ -285,7 +285,7 @@ export default {
             this.errors = [];
             Swal.fire({
               icon: 'success',
-              title: 'usuario excluído com sucesso!',
+              title: 'Usuário excluído com sucesso!',
               showConfirmButton: false,
               timer: 2000,
             });

@@ -295,7 +295,7 @@ export default {
             console.log(error.response.data.message)
             Swal.fire({
               icon: "error",
-              title: "Erro ao adicionar aluguél",
+              title: "Erro ao adicionar aluguel",
               text: error.response.data.message,
               showConfirmButton: false,
               timer: 5000,
@@ -306,7 +306,7 @@ export default {
     BookReturn(item) {
       Swal.fire({
         icon: "warning",
-        title: "Deseja Devolver o livro?",
+        title: "Deseja devolver o livro?",
         text: "Essa ação não pode ser desfeita!",
         showCancelButton: true,
         confirmButtonText: "Sim",

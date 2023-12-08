@@ -267,7 +267,7 @@ export default {
             this.errors = [];
             Swal.fire({
               icon: 'success',
-              title: 'Editora excluído com sucesso!',
+              title: 'Editora excluída com sucesso!',
               showConfirmButton: false,
               timer: 2000,
             });

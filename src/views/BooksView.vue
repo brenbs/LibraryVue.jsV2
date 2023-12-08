@@ -1,12 +1,12 @@
 <template>
   <v-card>
     <v-card-title>
-      <v-text-field v-model="searchValue" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
+      <v-text-field v-model="search" append-icon="mdi-magnify" label="Pesquisar" single-line hide-details>
       </v-text-field>
     </v-card-title>
     <v-data-table 
     :headers="headers" 
-    :search="searchValue" 
+    :search="search" 
     :items="books" 
     :items-per-page="pageSize"
     :page="page"
@@ -46,7 +46,7 @@
                     </v-autocomplete>
                     <v-text-field label="Lançamento:*" v-model="book.release" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
-                    <v-text-field label="quantidade:*" v-model="book.stock" :rules="geralRules" hide-details="auto"
+                    <v-text-field label="Quantidade:*" v-model="book.stock" :rules="geralRules" hide-details="auto"
                       required></v-text-field>
                   </v-container>
                 </v-card-text>
@@ -93,6 +93,7 @@ export default {
       },
 
       searchValue: "",
+      search:"",
       page: 1,
       pageSize: 5,
       orderByProperty: "id",
@@ -112,8 +113,8 @@ export default {
         name: '',
         author: '',
         publisher: 0,
-        release: '',
-        stock: '',
+        release: 0,
+        stock: 0,
         totalRental:0,
       },
       loadingTable:true,
@@ -150,8 +151,18 @@ export default {
         this.close();
       }
     },
-     searchValue:function(){
-    this.getBooks();
+    search:function(){
+      const dateRegex = /^(\d{1,2})\/?(\d{1,2})?\/?(\d{0,4})?$/;
+      this.page = 1;
+      this.searchValue=this.search;
+
+      if (dateRegex.test(this.search)) {
+        this.searchValue = this.parseDate(this.search);
+      } else if (this.search.match(/^\d{1,2}\/$/)) {
+        this.searchValue = this.parseDate(this.search);
+      }
+      this.getBooks();
+      console.log(this.searchValue);
     },
   },
   methods: {
@@ -218,7 +229,7 @@ export default {
         booksApi.save(createBook).then(() => {
           Swal.fire({
             icon: 'success',
-            title: 'livro adicionado com sucesso!',
+            title: 'Livro adicionado com sucesso!',
             showConfirmButton: false,
             timer: 2000,
           });
