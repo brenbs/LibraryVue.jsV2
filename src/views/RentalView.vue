@@ -192,7 +192,7 @@ export default {
       }
       this.getRentals();
       console.log(this.searchValue);
-    }
+    },
   },
   methods: {
     parseDate(date) {

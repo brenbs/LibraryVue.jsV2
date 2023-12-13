@@ -166,6 +166,30 @@ export default {
     },
   },
   methods: {
+    parseDate(date) {
+      const dateParts = date.split("/");
+      let formattedDate = "";
+
+      if (dateParts.length >= 1) {
+        const day = dateParts[0];
+        formattedDate = `${day}`;
+      }
+
+      if (dateParts.length >= 2) {
+        const month = dateParts[1];
+        if (month.length === 2) {
+        formattedDate = `${month}-${formattedDate}`;
+        }
+      }
+
+      if (dateParts.length >= 3) {
+        const year = dateParts[2];
+        if (year.length === 4) {
+          formattedDate = `${year}-${formattedDate}`;
+        }
+      }
+      return formattedDate;
+    },
     handleOptionsUpdate(options) {
       const sortByMapping = {
         id: "Id",
